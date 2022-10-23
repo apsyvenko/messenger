@@ -1,6 +1,9 @@
 package com.github.apsyvenko;
 
+import com.github.apsyvenko.schema.Message;
+import com.google.flatbuffers.FlatBufferBuilder;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -10,6 +13,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.*;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -45,7 +49,14 @@ public class ClientApp {
     }
 
     public static void sendMsg(Channel channel, String text) {
-        WebSocketFrame frame = new TextWebSocketFrame(text);
+        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+        int processedByServerOffset = builder.createString(text);
+        Message.startMessage(builder);
+        Message.addText(builder, processedByServerOffset);
+        int messageOffset = Message.endMessage(builder);
+        builder.finish(messageOffset);
+        ByteBuffer payload = builder.dataBuffer();
+        WebSocketFrame frame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload));
         channel.writeAndFlush(frame);
     }
 
