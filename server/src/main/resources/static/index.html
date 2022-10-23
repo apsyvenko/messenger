@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocketEcho</title>
+</head>
+<script>
+
+    function log(msg) {
+        var messagesDiv = document.getElementById('messages');
+        var elem = document.createElement('div');
+        var txt = document.createTextNode(msg);
+        elem.appendChild(txt);
+        messagesDiv.append(elem);
+    }
+
+    window.addEventListener('load', function (e) {
+        websocket = new WebSocket('ws://localhost:8080/ws/messages');
+
+        websocket.addEventListener('message', function (e) {
+            var msg = e.data;
+            log(msg);
+        });
+
+        setInterval(() => {
+            var current = new Date();
+            var msg = "Client time is - " + current.toLocaleString();
+
+            websocket.send(msg);
+        }, 2000);
+    });
+
+</script>
+<body>
+    <div id = "messages">
+
+    </div>
+</body>
+</html>

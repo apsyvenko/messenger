@@ -4,7 +4,7 @@
 
   <groupId>com.github.apsyvenko</groupId>
   <artifactId>messenger</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>0.0.1-SNAPSHOT</version>
 
   <modules>
     <module>common</module>
@@ -19,6 +19,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>17</java.version>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
   </properties>
 
 </project>
