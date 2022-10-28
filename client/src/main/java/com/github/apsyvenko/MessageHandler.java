@@ -5,12 +5,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class MessageHandler extends SimpleChannelInboundHandler<BinaryWebSocketFrame> {
+
+    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, BinaryWebSocketFrame binaryWebSocketFrame) throws Exception {
         Message message = Message.getRootAsMessage(binaryWebSocketFrame.content().nioBuffer());
-        System.out.println(message.text());
+        LOGGER.info("Message - {}", message.text());
     }
 
 }
