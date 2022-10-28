@@ -20,9 +20,14 @@ import java.util.Date;
 
 public class ClientApp {
 
-    private final static URI WS_URI = URI.create("ws://127.0.0.1:8080/ws/messages");
+    private static URI WS_URI = URI.create("ws://127.0.0.1:8080/ws/messages");
     private final static DateFormat DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
-    public static void main( String[] args ) {
+    public static void main( String[] args ) throws IllegalAccessException {
+
+        if (args.length == 1 && args[0] != null) {
+            String uri = args[0];
+            WS_URI = URI.create(uri);
+        }
 
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 

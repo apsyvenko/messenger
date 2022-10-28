@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  messenger-server:
+    image: "messenger-server:latest"
+    ports:
+      - "8080:8080"
+  messenger-client-1:
+    image: "messenger-client:latest"
+    depends_on:
+      - "messenger-server"
+    links:
+      - "messenger-server:server"
+  messenger-client-2:
+    image: "messenger-client:latest"
+    depends_on:
+      - "messenger-server"
+    links:
+      - "messenger-server:server"
