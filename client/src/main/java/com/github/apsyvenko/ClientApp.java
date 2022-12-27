@@ -1,6 +1,11 @@
 package com.github.apsyvenko;
 
+import com.github.apsyvenko.client.MessengerClient;
 import com.github.apsyvenko.schema.Message;
+import com.github.apsyvenko.util.cli.CommandLineParser;
+import com.github.apsyvenko.util.cli.ExecutionParameters;
+import com.github.apsyvenko.util.cli.Option;
+import com.github.apsyvenko.util.cli.Options;
 import com.google.flatbuffers.FlatBufferBuilder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -20,36 +25,36 @@ import java.util.Date;
 
 public class ClientApp {
 
-    private static URI WS_URI = URI.create("ws://127.0.0.1:8080/ws/messages");
+    private static final String WS_URI = "ws://127.0.0.1:8080/ws/messages";
     private final static DateFormat DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
-    public static void main( String[] args ) throws IllegalAccessException {
+    public static void main( String[] args ) throws IllegalAccessException, InterruptedException {
 
-        if (args.length == 1 && args[0] != null) {
-            String uri = args[0];
-            WS_URI = URI.create(uri);
+        Option urlParameter = new Option("url", true, "Server URL");
+        Option userParameter = new Option("user", true, "Username");
+        Option passwordParameter = new Option("password", true, "Password");
+
+        Options options = new Options()
+                .addOption(urlParameter)
+                .addOption(userParameter)
+                .addOption(passwordParameter);
+
+        ExecutionParameters executionParameters = CommandLineParser.parse(args, options);
+
+        if (executionParameters.isEmpty()) {
+            return;
         }
 
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        URI uri = URI.create(executionParameters.getParameter(urlParameter, WS_URI));
+        String userName = executionParameters.getParameter(userParameter, "");
+        String password = executionParameters.getParameter(passwordParameter, "");
 
-        try {
-            Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(workerGroup)
-                     .channel(NioSocketChannel.class)
-                     .handler(new Initializer());
+        MessengerClient messengerClient = new MessengerClient(uri, userName, password);
+        Channel channel = messengerClient.start();
 
-            ChannelFuture channelFuture = bootstrap.connect(WS_URI.getHost(), WS_URI.getPort());
-            Channel channel = channelFuture.sync().channel();
-
-            while (true) {
-                Date current = new Date();
-                sendMsg(channel, "Client time is - " + DATE_FORMAT.format(current));
-                Thread.sleep(2000);
-            }
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } finally {
-            workerGroup.shutdownGracefully();
+        while (true) {
+            Date current = new Date();
+            sendMsg(channel, "Client time is - " + DATE_FORMAT.format(current));
+            Thread.sleep(2000);
         }
     }
 
@@ -63,29 +68,6 @@ public class ClientApp {
         ByteBuffer payload = builder.dataBuffer();
         WebSocketFrame frame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload));
         channel.writeAndFlush(frame);
-    }
-
-    public static class Initializer extends ChannelInitializer<SocketChannel> {
-
-        @Override
-        protected void initChannel(SocketChannel socketChannel) throws Exception {
-            ChannelPipeline pipeline = socketChannel.pipeline();
-
-            WebSocketClientProtocolConfig webSocketClientConfig = WebSocketClientProtocolConfig
-                    .newBuilder()
-                    .webSocketUri(WS_URI)
-                    .version(WebSocketVersion.V13)
-                    .build();
-
-            pipeline.addLast(
-
-                    new HttpClientCodec(),
-                    new HttpObjectAggregator(8192),
-                    new WebSocketClientProtocolHandler(webSocketClientConfig),
-                    new MessageHandler()
-            );
-        }
-
     }
 
 }
