@@ -1,0 +1,25 @@
+server:
+  port: 8080
+spring:
+  cloud:
+    gateway:
+      httpclient:
+        wiretap=true
+      routes:
+        - id: auth-service
+          uri: http://localhost:9990
+          predicates:
+            - Path=/auth-service/**
+          filters:
+            - RewritePath=/auth-service/(?<segment>.*), /$\{segment}
+        - id: messenger-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/messenger-service/**
+          filters:
+            - RewritePath=/messenger-service/(?<segment>.*), /$\{segment}
+            - RemoveRequestHeader=Origin
+            - RemoveRequestHeader=origin
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE

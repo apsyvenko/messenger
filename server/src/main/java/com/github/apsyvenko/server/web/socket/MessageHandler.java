@@ -10,9 +10,13 @@ import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 import com.github.apsyvenko.schema.*;
 
 import java.nio.ByteBuffer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MessageHandler extends BinaryWebSocketHandler {
 
+    private final static DateFormat DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
     @Override
@@ -28,7 +32,7 @@ public class MessageHandler extends BinaryWebSocketHandler {
         LOGGER.info("Got message: {} from {}", messageFromClient.text(), session.getId());
 
         FlatBufferBuilder builder = new FlatBufferBuilder(1024);
-        int processedByServerOffset = builder.createString("Processed by server - " + messageFromClient.text());
+        int processedByServerOffset = builder.createString("Processed by server - " + messageFromClient.text() + " - " + DATE_FORMAT.format(new Date()));
         Message.startMessage(builder);
         Message.addText(builder, processedByServerOffset);
         int messageOffset = Message.endMessage(builder);

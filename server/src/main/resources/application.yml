@@ -1,9 +1,11 @@
+server:
+  port: 8081
 spring:
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://127.0.0.1:9990/realms/messenger
+          issuer-uri: http://localhost:9990/realms/messenger
 logging:
   level:
     com.github.apsyvenko.server.web: INFO

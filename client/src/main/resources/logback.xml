@@ -14,4 +14,8 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
+    <logger name="io.netty" level="DEBUG">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
 </configuration>

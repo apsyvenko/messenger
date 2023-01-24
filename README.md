@@ -3,8 +3,8 @@
 ## Functional requirements:
 1. Support one-to-one messaging
 2. Support group messaging
-3. Support message editing, deleting
-4. Support message delivery statuses:
+3. Support particle editing, deleting
+4. Support particle delivery statuses:
    - Sent
    - Delivered
    - Seen
@@ -59,7 +59,7 @@
 Load balancer should support **Session Affinity** pattern.
 
 ### Connected clients registry
-In order to route message to particular node separate service can be used to store information about connected clients per node.
+In order to route particle to particular node separate service can be used to store information about connected clients per node.
 
 ### Historical data and live updates
 On the first connect user will be subscribed on the live events and get some amount of historical based on input. 
@@ -69,5 +69,5 @@ On the first connect user will be subscribed on the live events and get some amo
 - To send **Correlation Identifier** pattern can be used.
 - As websockets is used as a transport it brings us **Single Socket Channel** pattern.
 - To add information about destination node (to which node receiver is connected) **Content Enricher** pattern may be applied.
-- To route message to particular node **Message Router** can be used.
+- To route particle to particular node **Message Router** can be used.
 - To keep messages in order **Resequencer** pattern can be used.

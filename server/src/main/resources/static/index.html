@@ -17,7 +17,7 @@
     window.addEventListener('load', function (e) {
         websocket = new WebSocket('ws://localhost:8080/ws/messages');
 
-        websocket.addEventListener('message', function (e) {
+        websocket.addEventListener('particle', function (e) {
             var msg = e.data;
             log(msg);
         });

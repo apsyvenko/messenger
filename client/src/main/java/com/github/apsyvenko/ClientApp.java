@@ -1,40 +1,52 @@
 package com.github.apsyvenko;
 
-import com.github.apsyvenko.client.MessengerClient;
-import com.github.apsyvenko.schema.Message;
+import com.github.apsyvenko.client.ClientWebSocketProcessor;
+import com.github.apsyvenko.client.auth.AuthenticationData;
+import com.github.apsyvenko.client.auth.HttpAuthenticator;
+import com.github.apsyvenko.client.web.HttpClient;
+import com.github.apsyvenko.client.web.bootstrap.BootstrapManager;
+import com.github.apsyvenko.client.Particle;
+import com.github.apsyvenko.client.config.MessengerConfig;
+import com.github.apsyvenko.client.web.ws.BasicWebSocket;
 import com.github.apsyvenko.util.cli.CommandLineParser;
 import com.github.apsyvenko.util.cli.ExecutionParameters;
 import com.github.apsyvenko.util.cli.Option;
 import com.github.apsyvenko.util.cli.Options;
-import com.google.flatbuffers.FlatBufferBuilder;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.websocketx.*;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class ClientApp {
 
-    private static final String WS_URI = "ws://127.0.0.1:8080/ws/messages";
+    private static final String HTTP_PROTOCOL = "http://";
+    private static final String WS_PROTOCOL = "ws://";
+    private static final String DEFAULT_URI = "127.0.0.1:8080";
+    private static final String AUTH_PATH = "/auth-service/realms/messenger/protocol/openid-connect/token";
+    private static final String MESSAGES_PATH = "/messenger-service/ws/messages";
+    private static final String AUTH_URI = HTTP_PROTOCOL + DEFAULT_URI + AUTH_PATH;
+
+    private static final String MESSAGES_URI = WS_PROTOCOL + DEFAULT_URI + MESSAGES_PATH;
     private final static DateFormat DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
-    public static void main( String[] args ) throws IllegalAccessException, InterruptedException {
+
+    public static void main(String[] args) throws Exception {
 
         Option urlParameter = new Option("url", true, "Server URL");
+        Option authServiceUrlParameter = new Option("authServiceUrl", true, "Auth service URL");
+        Option clientIdParameter = new Option("clientId", true, "Client application ID");
+        Option clientSecretParameter = new Option("clientSecret", true, "Client application secret");
+        Option grantTypeParameter = new Option("grantType", true, "Client application grant type");
+        Option scopeParameter = new Option("scope", true, "Client application scopeParameter");
         Option userParameter = new Option("user", true, "Username");
         Option passwordParameter = new Option("password", true, "Password");
 
         Options options = new Options()
                 .addOption(urlParameter)
+                .addOption(authServiceUrlParameter)
+                .addOption(clientIdParameter)
+                .addOption(clientSecretParameter)
+                .addOption(grantTypeParameter)
+                .addOption(scopeParameter)
                 .addOption(userParameter)
                 .addOption(passwordParameter);
 
@@ -44,30 +56,35 @@ public class ClientApp {
             return;
         }
 
-        URI uri = URI.create(executionParameters.getParameter(urlParameter, WS_URI));
-        String userName = executionParameters.getParameter(userParameter, "");
-        String password = executionParameters.getParameter(passwordParameter, "");
+        MessengerConfig messengerConfig = new MessengerConfig(
+                URI.create(executionParameters.getParameter(urlParameter, MESSAGES_URI)),
+                URI.create(executionParameters.getParameter(authServiceUrlParameter, AUTH_URI)),
+                executionParameters.getParameter(clientIdParameter, ""),
+                executionParameters.getParameter(clientSecretParameter, ""),
+                executionParameters.getParameter(grantTypeParameter, ""),
+                executionParameters.getParameter(scopeParameter, ""),
+                executionParameters.getParameter(userParameter, ""),
+                executionParameters.getParameter(passwordParameter, "")
+        );
 
-        MessengerClient messengerClient = new MessengerClient(uri, userName, password);
-        Channel channel = messengerClient.start();
+
+        BootstrapManager bootstrapManager = new BootstrapManager();
+        HttpClient httpClient = new HttpClient(bootstrapManager);
+
+        HttpAuthenticator httpAuthenticator = new HttpAuthenticator(messengerConfig, httpClient);
+        AuthenticationData authenticationData = httpAuthenticator.authenticate();
+
+        BasicWebSocket<Particle> webSocket = httpClient.connectWebSocket(
+                messengerConfig.messagesServiceUri(),
+                authenticationData,
+                new ClientWebSocketProcessor()
+        );
 
         while (true) {
-            Date current = new Date();
-            sendMsg(channel, "Client time is - " + DATE_FORMAT.format(current));
+            Particle particle = new Particle("From client.");
+            webSocket.sendMessage(particle);
             Thread.sleep(2000);
         }
-    }
-
-    public static void sendMsg(Channel channel, String text) {
-        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
-        int processedByServerOffset = builder.createString(text);
-        Message.startMessage(builder);
-        Message.addText(builder, processedByServerOffset);
-        int messageOffset = Message.endMessage(builder);
-        builder.finish(messageOffset);
-        ByteBuffer payload = builder.dataBuffer();
-        WebSocketFrame frame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload));
-        channel.writeAndFlush(frame);
     }
 
 }
