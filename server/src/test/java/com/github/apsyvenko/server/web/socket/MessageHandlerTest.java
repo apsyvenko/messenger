@@ -1,8 +1,7 @@
 package com.github.apsyvenko.server.web.socket;
 
-import com.github.apsyvenko.schema.Message;
+import com.github.apsyvenko.common.Particle;
 import com.github.apsyvenko.server.config.TestSecurityConfig;
-import com.google.flatbuffers.FlatBufferBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,7 +12,6 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -31,7 +29,7 @@ class MessageHandlerTest {
     private Integer port;
 
     private WebSocketClient webSocketClient;
-    private BlockingQueue<Message> responseHolder;
+    private BlockingQueue<Particle> responseHolder;
 
 
     @BeforeEach
@@ -40,18 +38,6 @@ class MessageHandlerTest {
         this.responseHolder = new ArrayBlockingQueue<>(1);
     }
 
-    private ByteBuffer buildMessageFromString(String str) {
-        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
-        int processedByServerOffset = builder.createString(str);
-        Message.startMessage(builder);
-        Message.addText(builder, processedByServerOffset);
-        int messageOffset = Message.endMessage(builder);
-        builder.finish(messageOffset);
-
-        return builder.dataBuffer();
-    }
-
-
     @Test
     public void testEcho() throws ExecutionException, InterruptedException, IOException {
         TestWebSocketHandler handler = new TestWebSocketHandler(responseHolder);
@@ -59,20 +45,21 @@ class MessageHandlerTest {
         WebSocketSession session = webSocketClient.doHandshake(handler, headers, URI.create(String.format(URL_TEMPLATE, port))).get();
 
         String messageFromClientString = "Tests message";
-        session.sendMessage(new BinaryMessage(buildMessageFromString(messageFromClientString)));
+        session.sendMessage(new BinaryMessage(new Particle(messageFromClientString).pack()));
 
         await().atMost(1, SECONDS).untilAsserted(() -> {
             assertFalse(responseHolder.isEmpty());
 
-            Message messageFromServer = responseHolder.take();
-            assertEquals("Processed by server - " + messageFromClientString, messageFromServer.text());
+            Particle messageFromServer = responseHolder.take();
+            assertTrue(messageFromServer.body().contains(messageFromClientString));
+            assertTrue(messageFromServer.body().contains("Processed by server - "));
         });
     }
     public static class TestWebSocketHandler implements WebSocketHandler {
 
-        private final BlockingQueue<Message> responseHolder;
+        private final BlockingQueue<Particle> responseHolder;
 
-        public TestWebSocketHandler(BlockingQueue<Message> responseHolder) {
+        public TestWebSocketHandler(BlockingQueue<Particle> responseHolder) {
             this.responseHolder = responseHolder;
         }
 
@@ -85,7 +72,7 @@ class MessageHandlerTest {
         public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
 
             if (message instanceof BinaryMessage binaryMessage) {
-                Message messageFromServer = Message.getRootAsMessage(binaryMessage.getPayload());
+                Particle messageFromServer = Particle.unpack(binaryMessage.getPayload());
                 responseHolder.add(messageFromServer);
             } else {
                 throw new IllegalAccessException("Unsupported message type.");

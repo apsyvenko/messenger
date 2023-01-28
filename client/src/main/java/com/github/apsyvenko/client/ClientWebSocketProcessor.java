@@ -2,7 +2,7 @@ package com.github.apsyvenko.client;
 
 import com.github.apsyvenko.client.web.ws.AbstractWebSocketProcessor;
 import com.github.apsyvenko.client.web.ws.MessageSender;
-import com.github.apsyvenko.schema.Message;
+import com.github.apsyvenko.common.Particle;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.slf4j.Logger;
@@ -21,7 +21,7 @@ public class ClientWebSocketProcessor extends AbstractWebSocketProcessor<Particl
 
     @Override
     public void onMessage(Particle message, Channel channel, MessageSender<Particle> messageSender) {
-        LOGGER.info(message.text());
+        LOGGER.info(message.body());
     }
 
     @Override
@@ -36,8 +36,8 @@ public class ClientWebSocketProcessor extends AbstractWebSocketProcessor<Particl
 
     @Override
     public Particle processMessage(BinaryWebSocketFrame binaryWebSocketFrame) {
-        Message message = Message.getRootAsMessage(binaryWebSocketFrame.content().nioBuffer());
-        return new Particle(message.text());
+        ByteBuffer byteBuffer = binaryWebSocketFrame.content().nioBuffer();
+        return Particle.unpack(byteBuffer);
     }
 
     @Override

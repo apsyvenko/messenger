@@ -1,0 +1,18 @@
+namespace com.github.apsyvenko.schema;
+
+enum Command: byte { CONNECT, CONNECTED, ERROR, SEND, MESSAGE }
+
+enum HeadersName: byte { AUTHORIZATION, ID, DESTINATION }
+
+table Header {
+    name: HeadersName;
+    value: string;
+}
+
+table RawParticle {
+    command: Command;
+    headers: [Header];
+    body:string;
+}
+
+root_type RawParticle;

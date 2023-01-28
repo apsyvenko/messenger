@@ -1,13 +1,12 @@
 package com.github.apsyvenko.server.web.socket;
 
-import com.google.flatbuffers.FlatBufferBuilder;
+import com.github.apsyvenko.common.Particle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
-import com.github.apsyvenko.schema.*;
 
 import java.nio.ByteBuffer;
 import java.text.DateFormat;
@@ -27,19 +26,16 @@ public class MessageHandler extends BinaryWebSocketHandler {
 
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
-        Message messageFromClient = Message.getRootAsMessage(message.getPayload());
+        ByteBuffer inPayload = message.getPayload();
+        Particle inParticle = Particle.unpack(inPayload);
 
-        LOGGER.info("Got message: {} from {}", messageFromClient.text(), session.getId());
+        LOGGER.info("Got message: {} from {}", inParticle.body(), session.getId());
 
-        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
-        int processedByServerOffset = builder.createString("Processed by server - " + messageFromClient.text() + " - " + DATE_FORMAT.format(new Date()));
-        Message.startMessage(builder);
-        Message.addText(builder, processedByServerOffset);
-        int messageOffset = Message.endMessage(builder);
-        builder.finish(messageOffset);
-        ByteBuffer payload = builder.dataBuffer();
+        String outText = "Processed by server - " + inParticle.body() + " - " + DATE_FORMAT.format(new Date());
+        Particle outParticle = new Particle(outText);
+        ByteBuffer outPayload = outParticle.pack();
 
-        session.sendMessage(new BinaryMessage(payload));
+        session.sendMessage(new BinaryMessage(outPayload));
     }
 
     @Override

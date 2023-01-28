@@ -1,5 +1,0 @@
-namespace com.github.apsyvenko.schema;
-
-table Message {
-    text:string;
-}
